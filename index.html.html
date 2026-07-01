@@ -1559,7 +1559,7 @@ updDT(); setInterval(updDT,30000);
     <input type="date" id="audit-date-f" onchange="renderAudit()">
   </div>
   <div class="tcard"><div class="thead2"><div class="ttitle">Activity Log</div></div>
-    <div class="twrap"><table><thead><tr><th>Date/Time</th><th>User</th><th>Role</th><th>Branch</th><th>Action</th><th>Module</th><th>Details</th><th>Status</th></tr></thead>
+    <div class="twrap"><table><thead><tr><th>Date/Time</th><th>User</th><th>Role</th><th>Branch</th><th>Action</th><th>Module</th><th>Details</th></tr></thead>
       <tbody id="audit-tb"></tbody>
     </table></div>
   </div>
@@ -3221,7 +3221,7 @@ console.log('✅ Best Lolama ERP v4 Enterprise Layer loaded');
   <div class="tcard">
     <div class="thead2"><div class="ttitle">📊 Branch Comparison Table</div></div>
     <div class="twrap"><table><thead><tr>
-      <th>#</th><th>Code</th><th>Branch Name</th><th>Address</th><th>Manager</th><th>Owner</th><th>Opened</th><th>Status</th><th>Target (₱)</th><th>Revenue (₱)</th><th>vs Target</th><th>Op. Loss %</th><th>Attendance</th><th>Health Score</th><th>Last Sync</th><th>Actions</th>
+      <th>#</th><th>Code</th><th>Branch Name</th><th>Address</th><th>Manager</th><th>Owner</th><th>Opened</th><th>Status</th><th>Target (₱)</th><th>Revenue (₱)</th><th>vs Target</th><th>Actions</th>
     </tr></thead><tbody id="br9-tb"></tbody></table></div>
   </div>
 </div>
@@ -3551,7 +3551,7 @@ window.renderBranches9 = function() {
         +'<td><span class="badge '+cls+'">'+pct+'%</span></td>'
         +'<td><button class="btn bsm bgold" onclick="editBranch9(\''+b.code+'\')">✏️</button> '
         +'<button class="btn bsm bdan" onclick="deleteBranch9(\''+b.code+'\')">🗑️</button></td></tr>';
-    }).join('') || '<tr><td colspan="16" style="text-align:center;color:#888;padding:20px">No branches</td></tr>';
+    }).join('') || '<tr><td colspan="12" style="text-align:center;color:#888;padding:20px">No branches</td></tr>';
   }
 };
 
@@ -9790,147 +9790,6 @@ console.log('[v12] Executive Dashboard widgets extended.');
   };
 
   console.log('[v13] Enterprise Franchise Executive Dashboard add-on ready — Executive KPIs, Operational Loss Center, Branch Monitoring, AI Recommendations, Executive Charts, Alerts, Quick Actions.');
-})();
-
-</script>
-
-<script>
-// ── ENTERPRISE POLISH PATCH v14 (final layer) ─────────────────────────
-// Targeted fixes/enhancements only. Nothing removed. All prior functions
-// remain defined; only window bindings are re-pointed (same convention
-// used throughout this file, e.g. v9/v10/v11/v12/v13).
-(function() {
-  'use strict';
-
-  // ── FIX: Demo Mode badge was being appended into a hidden legacy
-  //    container (#erp-top-bar, display:none) and never appeared on
-  //    screen. Re-point it at the real visible topbar. ──────────────────
-  function xpmUpdateTopbarLabel() {
-    var mode = (typeof smGetMode === 'function') ? smGetMode() : (localStorage.getItem('system_mode') || 'demo');
-    var tr2 = document.querySelector('.topbar .tr2');
-    if (!tr2) return;
-    var existing = document.getElementById('sm-mode-badge');
-    if (existing) existing.remove();
-    var badge = document.createElement('div');
-    badge.id = 'sm-mode-badge';
-    badge.title = 'Click to open System Settings';
-    badge.onclick = function() { if (window.navigateTo) navigateTo('companysettings'); };
-    badge.style.cssText = 'cursor:pointer;padding:5px 13px;border-radius:20px;font-size:11px;font-weight:900;letter-spacing:.5px;white-space:nowrap;'
-      + (mode === 'live'
-          ? 'background:#2ecc71;color:#fff;box-shadow:0 0 0 3px rgba(46,204,113,.22)'
-          : 'background:#F5C842;color:#5A2E0A;box-shadow:0 0 0 3px rgba(245,200,66,.22)');
-    badge.textContent = mode === 'live' ? '🟢 LIVE MODE' : '🟡 DEMO MODE';
-    tr2.insertBefore(badge, tr2.firstChild);
-  }
-  window.smUpdateTopbarLabel = xpmUpdateTopbarLabel;
-
-  // ── ENHANCEMENT: Audit Trail Status column. Purely additive — derives
-  //    a status label from the existing action text, no changes to the
-  //    logAudit() call signature so none of its ~100+ call sites break. ──
-  function xpmAuditStatus(action) {
-    var a = (action || '').toLowerCase();
-    if (a.indexOf('reject') >= 0 || a.indexOf('delete') >= 0 || a.indexOf('clear') >= 0 || a.indexOf('remove') >= 0) return { label: 'Rejected', cls: 'br2' };
-    if (a.indexOf('approve') >= 0 || a.indexOf('save') >= 0 || a.indexOf('add') >= 0 || a.indexOf('create') >= 0) return { label: 'Approved', cls: 'bg' };
-    if (a.indexOf('pending') >= 0 || a.indexOf('submit') >= 0) return { label: 'Pending', cls: 'bgd' };
-    if (a.indexOf('login') >= 0 || a.indexOf('logout') >= 0 || a.indexOf('switch') >= 0) return { label: 'System', cls: 'bb' };
-    return { label: 'Success', cls: 'bg' };
-  }
-
-  window.renderAudit = function() {
-    var log = lsG('audit', []);
-    var tb = document.getElementById('audit-tb'); if (!tb) return;
-    var srch = (document.getElementById('audit-search') || { value: '' }).value.toLowerCase();
-    var mod = (document.getElementById('audit-module-f') || { value: '' }).value;
-    var dt = (document.getElementById('audit-date-f') || { value: '' }).value;
-    var f = log.filter(function(a) {
-      if (srch && JSON.stringify(a).toLowerCase().indexOf(srch) < 0) return false;
-      if (mod && a.module !== mod) return false;
-      if (dt && a.dt.indexOf(dt) < 0) return false;
-      return true;
-    });
-    tb.innerHTML = f.map(function(a) {
-      var st = xpmAuditStatus(a.action);
-      return '<tr><td style="white-space:nowrap;font-size:11px">' + a.dt + '</td><td><strong>' + a.user + '</strong></td>'
-        + '<td><span class="badge bgd">' + a.role + '</span></td><td>' + a.branch + '</td>'
-        + '<td><strong>' + a.action + '</strong></td><td>' + a.module + '</td>'
-        + '<td style="font-size:12px;color:#666">' + a.details + '</td>'
-        + '<td><span class="badge ' + st.cls + '">' + st.label + '</span></td></tr>';
-    }).join('') || '<tr><td colspan="8" style="text-align:center;color:#888;padding:20px">No audit records</td></tr>';
-  };
-
-  window.exportAudit = function() {
-    var log = lsG('audit', []);
-    var rows = [['Date/Time', 'User', 'Role', 'Branch', 'Action', 'Module', 'Details', 'Status']]
-      .concat(log.map(function(a) { var st = xpmAuditStatus(a.action); return [a.dt, a.user, a.role, a.branch, a.action, a.module, a.details, st.label]; }));
-    dlCSV(rows, 'audit_trail');
-  };
-
-  // ── ENHANCEMENT: Branch Monitoring table — add Op. Loss %, Attendance,
-  //    Health Score, Last Sync + a "View Details" button, sourced live
-  //    from the existing el9BranchSummary() engine. Wraps (does not
-  //    replace) the existing render chain. ─────────────────────────────
-  function xpmEnrichBranchTable() {
-    var tb = document.getElementById('br9-tb'); if (!tb) return;
-    if (typeof window.el9BranchSummary !== 'function') return;
-    var summaries = window.el9BranchSummary();
-    var byName = {}; summaries.forEach(function(s) { byName[s.branch] = s; });
-    var now = new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
-
-    Array.prototype.forEach.call(tb.querySelectorAll('tr'), function(tr) {
-      var cells = tr.querySelectorAll('td');
-      if (cells.length < 3) return; // skip "No branches" row
-      if (tr.querySelector('.xpm-added')) return; // already enriched
-      var branchName = cells[2].textContent.trim();
-      var s = byName[branchName];
-      var lossPct = s ? s.lossPct + '%' : '—';
-      var attendance = (s && s.employeeCount) ? Math.round((s.employeesPresentToday / s.employeeCount) * 100) + '%' : '—';
-      var health = s ? s.branchScore : '—';
-      var healthColor = (typeof health === 'number') ? (health >= 85 ? '#2ecc71' : health >= 70 ? '#f39c12' : '#e74c3c') : '#888';
-
-      var tdLoss = document.createElement('td'); tdLoss.className = 'xpm-added'; tdLoss.textContent = lossPct;
-      var tdAtt = document.createElement('td'); tdAtt.className = 'xpm-added'; tdAtt.textContent = attendance;
-      var tdHealth = document.createElement('td'); tdHealth.className = 'xpm-added';
-      tdHealth.innerHTML = '<span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:800;color:#fff;background:' + healthColor + '">' + health + '</span>';
-      var tdSync = document.createElement('td'); tdSync.className = 'xpm-added'; tdSync.style.cssText = 'font-size:11px;color:#888'; tdSync.textContent = now;
-
-      var actionsTd = cells[cells.length - 1];
-      actionsTd.insertAdjacentHTML('beforeend', ' <button class="btn bsm binf" onclick="el9GoToBranch(\'' + branchName.replace(/'/g, "\\'") + '\')">👁️ View Details</button>');
-
-      tr.insertBefore(tdLoss, actionsTd);
-      tr.insertBefore(tdAtt, actionsTd);
-      tr.insertBefore(tdHealth, actionsTd);
-      tr.insertBefore(tdSync, actionsTd);
-    });
-  }
-
-  var _xpmPrevRenderB9 = window.renderBranches9;
-  window.renderBranches9 = function() {
-    if (_xpmPrevRenderB9) _xpmPrevRenderB9();
-    setTimeout(xpmEnrichBranchTable, 30);
-  };
-
-  // ── Hooks — same chain-the-previous-handler convention used across
-  //    this file (v9–v13). ─────────────────────────────────────────────
-  document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(xpmUpdateTopbarLabel, 350);
-    setTimeout(function() { if (typeof renderAudit === 'function') renderAudit(); }, 350);
-  });
-
-  var _xpmPrevSp = window.sp;
-  window.sp = function(name) {
-    if (_xpmPrevSp) _xpmPrevSp(name);
-    if (name === 'audit') setTimeout(function() { window.renderAudit(); }, 150);
-    if (name === 'branchv5') setTimeout(xpmEnrichBranchTable, 200);
-    setTimeout(xpmUpdateTopbarLabel, 50);
-  };
-
-  var _xpmPrevLogin = window.doLogin;
-  window.doLogin = function() {
-    if (_xpmPrevLogin) _xpmPrevLogin();
-    setTimeout(xpmUpdateTopbarLabel, 300);
-  };
-
-  console.log('[v14] Enterprise Polish Patch ready — visible Demo/Live badge fix, Audit Trail Status column, Branch Monitoring (Op. Loss %, Attendance, Health Score, Last Sync, View Details).');
 })();
 
 </script>
